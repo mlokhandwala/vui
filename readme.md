@@ -30,7 +30,9 @@ You can clone with the base model quite well but it's not perfect as hasn't seen
 2) Hallucinations: yes the model does hallucinate, but this is the best I could do with limited resources! :(
 3) VAD does slow things down but needed to help remove areas of silence.
 
-@software{vui_2024,
+
+```
+@software{vui_2025,
   author = {Coultas Blum, Harry},
   month = {01},
   title = {{vui}},
@@ -38,3 +40,4 @@ You can clone with the base model quite well but it's not perfect as hasn't seen
   version = {1.0.0},
   year = {2025}
 }
+```
