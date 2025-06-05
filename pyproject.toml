@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vui"
+description = "Voice user interfaces"
+dynamic = ["version"]
+
+requires-python = ">=3.12"
+
+dependencies = [
+    "einops",
+    "huggingface_hub[hf_transfer]",
+    "inflect",
+    "gradio",
+    "numba",
+    "numpy",
+    "openai-whisper",
+    "feedparser",
+    "pydantic",
+    "pyannote.audio",
+    "soundfile",
+    "sphn",
+    "tiktoken",
+    "torch",
+    "torchaudio",
+    "tqdm",
+    "transformers",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
