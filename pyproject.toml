@@ -11,15 +11,15 @@ requires-python = ">=3.12"
 
 dependencies = [
     "einops",
-    "huggingface_hub[hf_transfer]",
+    "huggingface_hub[hf_transfer]"
     "inflect",
     "gradio",
     "numba",
     "numpy",
+    "openai-whisper",
     "pydantic",
     "pyannote.audio",
     "soundfile",
-    "sphn",
     "tiktoken",
     "torch",
     "torchaudio",

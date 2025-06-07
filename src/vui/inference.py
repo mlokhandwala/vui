@@ -59,7 +59,6 @@ def asr(chunk, model=None, prefix=None):
     elif wm is None:
         wm = whisper.load_model("turbo", "cuda")
 
-    """Process audio with VAD and transcribe"""
     chunk = whisper.pad_or_trim(chunk)
     mel = whisper.log_mel_spectrogram(chunk, n_mels=wm.dims.n_mels).to(wm.device)
     options = whisper.DecodingOptions(
