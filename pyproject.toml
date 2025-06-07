@@ -16,8 +16,6 @@ dependencies = [
     "gradio",
     "numba",
     "numpy",
-    "openai-whisper",
-    "feedparser",
     "pydantic",
     "pyannote.audio",
     "soundfile",
