@@ -24,6 +24,10 @@ python demo.py
 
 You can clone with the base model quite well but it's not perfect as hasn't seen that much audio / wasn't trained for long
 
+# Research
+
+vui is a llama based transformer that predicts audio tokens.
+
 # FAQ
 
 1) Was developed with on two 4090's https://x.com/harrycblum/status/1752698806184063153
