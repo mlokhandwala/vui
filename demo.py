@@ -119,48 +119,46 @@ def text_to_speech(text, prompt_audio=None, temperature=0.5, top_k=100, top_p=No
 
     # Process prompt audio if provided
     prompt_codes = None
+    prompt_text = ""
     if prompt_audio is not None:
-        try:
-            sr, audio_data = prompt_audio
-            
-            # Convert to torch tensor and ensure correct format
-            if isinstance(audio_data, tuple):
-                audio_data = audio_data[1]  # Get audio array from tuple
-            
-            audio_tensor = torch.from_numpy(audio_data).mean(1)
-            print(audio_tensor.shape)
-            
-            # Resample to codec sample rate if needed
-            codec_sr = current_model.codec.config.sample_rate
-            if sr != codec_sr:
-                resampler = torchaudio.transforms.Resample(sr, codec_sr)
-                audio_tensor = resampler(audio_tensor)
-            
-            # Limit to 30 seconds
-            max_samples = int(30 * codec_sr)
-            if len(audio_tensor) > max_samples:
-                audio_tensor = audio_tensor[:max_samples]
+        sr, audio = prompt_audio
+        
+        audio = torch.from_numpy(audio).float()
+        audio = audio / audio.abs().max()
+        if len(audio.shape) > 1:
+            audio = audio.mean(1)
+        print(audio.shape)
+        torchaudio.save("prompt_audio.wav", audio[None], sr)
+       
+        # Resample to codec sample rate if needed
+        codec_sr = current_model.codec.config.sample_rate
+        if sr != codec_sr:
+            resampler = torchaudio.transforms.Resample(sr, codec_sr)
+            audio = resampler(audio)
+        
+        # Encode audio to get prompt codes
+        with torch.inference_mode():
+            audio = audio[None, None]
+            prompt_codes = current_model.codec.encode(audio.cuda())
 
-            prompt_text =  asr(audio_tensor)
-            print("PROMPT_TEXT")
-            text = text + prompt_text
-            
-            # Encode audio to get prompt codes
-            with torch.inference_mode():
-                audio_tensor = audio_tensor.unsqueeze(0).unsqueeze(0)  # Add batch and channel dims
-                prompt_codes = current_model.codec.encode(audio_tensor.cuda())
-            
-            print(f"Using audio prompt with shape: {prompt_codes.shape}")
-            
-        except Exception as e:
-            print(f"Error processing prompt audio: {e}")
-            prompt_codes = None
+        # Limit to 30 seconds
+        max_samples = int(30 * codec_sr)
+        if len(audio) > max_samples:
+            audio = audio[:max_samples]
+
+        resampler = torchaudio.transforms.Resample(codec_sr, 16000)
+        prompt_text =  asr(resampler(audio.flatten()))
+        print("PROMPT_TEXT", prompt_text)
+        
+        
+        print(f"Using audio prompt with shape: {prompt_codes.shape}")
 
     # Generate speech using render
     t1 = time.perf_counter()
+    print(prompt_text +  text)
     result = render(
         current_model,
-        prompt_text  + " " + text.strip(),
+        (prompt_text  + " " + text).strip(),
         prompt_codes=prompt_codes,
         temperature=temperature,
         top_k=top_k,
@@ -297,6 +295,7 @@ document.addEventListener('DOMContentLoaded', function() {
             audio_input = gr.Audio(
                 label="Voice Prompt (optional) - Upload up to 30s of audio to use as voice style prompt",
                 type="numpy",
+                format="wav",
                 waveform_options={"sample_rate": 22050}
             )
 
@@ -438,4 +437,4 @@ document.addEventListener('DOMContentLoaded', function() {
     )
 
 if __name__ == "__main__":
-    demo.launch(server_name="0.0.0.0", share=True)
+    demo.launch(server_name="0.0.0.0")
