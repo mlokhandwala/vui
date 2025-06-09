@@ -240,68 +240,6 @@ def pad_or_cut_left(t: Tensor, value: int) -> Tensor:
     return t[-value:]
 
 
-def dl_pt(orig: str):
-    from os.path import exists
-
-    import torch
-
-    from vui.storage import s3, split_bucket_path
-
-    if not orig.endswith(".pt"):
-        orig = orig + ".pt"
-
-    load = partial(torch.load, weights_only=True)
-    if exists(orig):
-        return load(orig)
-    url = "/data/" + orig
-
-    if exists(url):
-        return load(url)
-    url = "s3://fluxions/" + orig
-
-    bucket, key = split_bucket_path(url)
-    response = s3.get_object(Bucket=bucket, Key=key)
-    return load(response["Body"])
-
-
-def dl_ogg(url: str, start=0, end=-1, sr=None):
-    import re
-    from os.path import exists
-
-    import soundfile as sf
-    import torch
-
-    search_sr = re.search(r"(\d+)/", url)
-    if search_sr:
-        sr = int(search_sr.group(1))
-
-    local_file = exists(url)
-
-    if exists("/data/audio/" + url):
-        local_file = True
-        url = "/data/audio/" + url
-
-    if not local_file:
-        from vui.storage import s3
-
-        url = "s3://fluxions/" + url
-        b, p = split_bucket_path(url)
-        url = s3.get_object(Bucket=b, Key=p)["Body"]
-
-    if sr is None:
-        if local_file:
-            sr = sf.info(url).samplerate
-        else:
-            sr = sf.info(url.read()).samplerate
-
-    start_frame = int(start * sr)
-    num_frames = int(end * sr) - start_frame
-    wav, _ = sf.read(url, frames=num_frames, start=start_frame, always_2d=True)
-    wav = torch.from_numpy(wav).float()
-    wav = wav.T.mean(0, keepdim=True)
-    return wav, sr
-
-
 class timer:
     def __init__(self, name=""):
         self.name = name
@@ -315,105 +253,12 @@ class timer:
         print(f"{self.name} {elapsed:.4f}")
 
 
-@torch.inference_mode()
-def decode_audio_from_indices(model, indices, chunk_size=64):
-    """
-    Decodes audio from indices in batches to avoid memory issues.
-
-    Args:
-        model: Codec
-        indices: Tensor of shape (1, n_quantizers, sequence_length)
-        chunk_size: Number of samples to process at once
-
-    Returns:
-        Tensor of reconstructed audio
-    """
-    device = model.device
-    indices = indices.to(device)
-    _, _, seq_len = indices.shape
-    chunks = seq_len // chunk_size + (1 if seq_len % chunk_size != 0 else 0)
-
-    audio_chunks = []
-    for i in range(chunks):
-        start_idx = i * chunk_size
-        end_idx = min(start_idx + chunk_size, seq_len)
-        chunk_indices = indices[:, :, start_idx:end_idx]
-        chunk_audio = model.from_indices(chunk_indices)
-        audio_chunks.append(chunk_audio.cpu())
-
-    full_audio = torch.cat(audio_chunks, dim=-1)
-    return full_audio.flatten()
-
-
-def normalize_loudness(waveform, sample_rate: int, lufs: float = -12.0):
-    """
-    Normalize the loudness of an audio tensor using torchaudio.transforms.Loudness.
-
-    Args:
-    audio_tensor (torch.Tensor): Input audio tensor of shape (channels, samples)
-    sample_rate (int): Sampling rate of the audio
-    target_loudness (float): Target loudness in LUFS (default: -16.0 LUFS)
-
-    Returns:
-    torch.Tensor: Loudness-normalized audio tensor
-    """
-    import torchaudio
-
-    # Ensure the input tensor is 2D (add channel dimension if it's 1D)
-    if waveform.ndim == 1:
-        waveform = waveform.unsqueeze(0)
-
-    # Create a Loudness transform
-    loudness_transform = torchaudio.transforms.Loudness(sample_rate)
-
-    # Measure the current loudness
-    current_loudness = loudness_transform(waveform)
-
-    # Calculate the required gain
-    gain_db = lufs - current_loudness
-
-    # Convert gain from dB to linear scale
-    gain_linear = torch.pow(10, gain_db / 20)
-
-    # Apply the gain to normalize loudness
-    normalized_audio = waveform * gain_linear
-
-    return normalized_audio
-
-
 def get_basename_without_extension(file_path):
     from pathlib import Path
 
     p = Path(file_path)
     return p.stem
 
-
-def ollama(prompt, MODEL=None):
-    import os
-
-    import requests
-
-    OLLAMA_HOST = "http://localhost:11434"
-    API = f"{OLLAMA_HOST}/api/generate"
-
-    if MODEL is None:
-        MODEL = os.environ.get("OLLAMA_MODEL", "gemma:1b")
-
-    payload = {
-        "model": MODEL,
-        "prompt": prompt,
-        "stream": False,
-        "options": {"temperature": 0.9, "top_p": 0.9, "max_tokens": 1000},
-    }
-
-    try:
-        response = requests.post(API, json=payload)
-        response.raise_for_status()  # Raise exception for HTTP errors
-        result = response.json()
-        return result.get("response", "")
-    except requests.exceptions.RequestException as e:
-        print(f"Error calling Ollama API: {e}")
-        return ""
 
 
 def decompile_state_dict(state_dict):
