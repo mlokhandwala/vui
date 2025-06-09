@@ -2,8 +2,9 @@ import time
 
 import gradio as gr
 import torch
+import torchaudio
 
-from vui.inference import render
+from vui.inference import asr, render
 from vui.model import Vui
 
 
@@ -45,7 +46,7 @@ def load_and_warm_model(model_name):
     render(
         model,
         warmup_text,
-        max_secs=10,
+        max_secs=5,
     )
 
     current_model = model
@@ -55,8 +56,9 @@ def load_and_warm_model(model_name):
 
 
 # Load default model (COHOST)
+default_model = "BASE"
 default_model = (
-    "COHOST" if "COHOST" in AVAILABLE_MODELS else list(AVAILABLE_MODELS.keys())[0]
+    "BASE" if "BASE" in AVAILABLE_MODELS else list(AVAILABLE_MODELS.keys())[0]
 )
 model = load_and_warm_model(default_model)
 
@@ -92,12 +94,15 @@ It was supposed to be a chicken bacon lettuce tomatoe, but it was fucking shite,
 ]
 
 
-def text_to_speech(text, temperature=0.5, top_k=100, top_p=None, max_duration=60):
+def text_to_speech(
+    text, prompt_audio=None, temperature=0.5, top_k=100, top_p=None, max_duration=120
+):
     """
     Convert text to speech using the current Vui model
 
     Args:
         text (str): Input text to convert to speech
+        prompt_audio (tuple): Optional (sample_rate, audio_array) from Gradio audio input
         temperature (float): Sampling temperature (0.1-1.0)
         top_k (int): Top-k sampling parameter
         top_p (float): Top-p sampling parameter (None to disable)
@@ -114,11 +119,49 @@ def text_to_speech(text, temperature=0.5, top_k=100, top_p=None, max_duration=60
 
     print(f"Generating speech for: {text[:50]}... using model {current_model_name}")
 
+    # Process prompt audio if provided
+    prompt_codes = None
+    prompt_text = ""
+    if prompt_audio is not None:
+        sr, audio = prompt_audio
+
+        audio = torch.from_numpy(audio).float()
+        audio = audio / audio.abs().max()
+        if len(audio.shape) > 1:
+            audio = audio.mean(1)
+
+        codec_sr = current_model.codec.config.sample_rate
+        # Limit to 30 seconds
+        max_samples = int(30 * codec_sr)
+        if len(audio) > max_samples:
+            audio = audio[:max_samples]
+
+        torchaudio.save("prompt_audio.wav", audio[None], sr)
+        print(audio.shape)
+
+        # Resample to codec sample rate if needed
+        if sr != codec_sr:
+            resampler = torchaudio.transforms.Resample(sr, codec_sr)
+            audio = resampler(audio)
+
+        # Encode audio to get prompt codes
+        with torch.inference_mode():
+            audio = audio[None, None]
+            prompt_codes = current_model.codec.encode(audio.cuda())
+
+        resampler = torchaudio.transforms.Resample(codec_sr, 16000)
+        prompt_text = asr(resampler(audio.flatten()))
+        print("PROMPT_TEXT", prompt_text)
+
+        print(f"Using audio prompt with shape: {prompt_codes.shape}")
+
     # Generate speech using render
     t1 = time.perf_counter()
+    print(prompt_text + text)
     result = render(
         current_model,
-        text.strip(),
+        (prompt_text + " " + text).strip(),
+        prompt_codes=prompt_codes,
         temperature=temperature,
         top_k=top_k,
         top_p=top_p,
@@ -250,6 +293,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 lines=1,
             )
 
+            # Audio input for voice prompt
+            audio_input = gr.Audio(
+                label="Voice Prompt (optional) - Upload up to 30s of audio to use as voice style prompt",
+                type="numpy",
+                format="wav",
+                waveform_options={"sample_rate": 22050},
+            )
+
             # Text input
             text_input = gr.Textbox(
                 label=None,
@@ -330,7 +381,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 max_duration = gr.Slider(
                     minimum=5,
                     maximum=120,
-                    value=60,
+                    value=120,
                     step=5,
                     label="Max Duration (seconds)",
                     info="Maximum length of generated audio",
@@ -354,20 +405,42 @@ document.addEventListener('DOMContentLoaded', function() {
     model_dropdown.change(fn=change_model, inputs=model_dropdown, outputs=model_status)
 
     # Connect the generate function
-    def generate_wrapper(text, temp, k, use_p, p, duration):
+    def generate_wrapper(text, prompt_audio, temp, k, use_p, p, duration):
         top_p_val = p if use_p else None
-        return text_to_speech(text, temp, k, top_p_val, duration)
+
+        # If audio prompt is provided, switch to BASE model
+        if prompt_audio is not None:
+            if current_model_name != "BASE":
+                change_model("BASE")
+
+        return text_to_speech(text, prompt_audio, temp, k, top_p_val, duration)
 
     generate_btn.click(
         fn=generate_wrapper,
-        inputs=[text_input, temperature, top_k, use_top_p, top_p, max_duration],
+        inputs=[
+            text_input,
+            audio_input,
+            temperature,
+            top_k,
+            use_top_p,
+            top_p,
+            max_duration,
+        ],
         outputs=[audio_output, info_output],
     )
 
     # Also allow Enter key to generate
     text_input.submit(
         fn=generate_wrapper,
-        inputs=[text_input, temperature, top_k, use_top_p, top_p, max_duration],
+        inputs=[
+            text_input,
+            audio_input,
+            temperature,
+            top_k,
+            use_top_p,
+            top_p,
+            max_duration,
+        ],
         outputs=[audio_output, info_output],
     )
 
@@ -382,4 +455,4 @@ document.addEventListener('DOMContentLoaded', function() {
     )
 
 if __name__ == "__main__":
-    demo.launch(server_name="0.0.0.0", share=True)
+    demo.launch(server_name="0.0.0.0")

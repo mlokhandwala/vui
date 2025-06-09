@@ -194,6 +194,7 @@ def generate(
         codes = torch.full(
             (B, Q, max_gen_len), unknown_token, dtype=torch.int64, device=device
         )
+        print("codes", codes.shape)
 
         codes[:, :, :start_offset] = prompt_codes
 

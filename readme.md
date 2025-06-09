@@ -10,6 +10,8 @@ uv pip install -e .
 
 # Demo
 
+[Try on Gradio](https://huggingface.co/spaces/fluxions/vui-space)
+
 ```sh
 python demo.py
 ````
