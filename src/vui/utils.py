@@ -1,4 +1,3 @@
-
 def load_what_you_can(checkpoint: dict, model):
     """
     This method takes a checkpoint and loads as many weights from it as possible:
@@ -37,7 +36,6 @@ def load_what_you_can(checkpoint: dict, model):
         model_state[tuple(idxs)].copy_(param[tuple(idxs)])
 
     return model.load_state_dict(model_state_dict)
-
 
 
 def decompile_state_dict(state_dict):
