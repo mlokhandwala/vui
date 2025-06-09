@@ -10,7 +10,6 @@ from torch.nn.attention import SDPBackend, sdpa_kernel
 
 from vui.model import Vui
 from vui.sampling import multinomial, sample_top_k, sample_top_p, sample_top_p_top_k
-from vui.utils import timer
 from vui.vad import detect_voice_activity as vad
 
 
@@ -154,7 +153,6 @@ def generate(
     with (
         torch.autocast("cuda", torch.bfloat16, True),
         sdpa_kernel([SDPBackend.MATH]),
-        timer("generate"),
     ):
         t1 = time.perf_counter()
         batch_size = 1
