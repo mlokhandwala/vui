@@ -46,7 +46,7 @@ def load_and_warm_model(model_name):
     render(
         model,
         warmup_text,
-        max_secs=5,
+        max_secs=10,
     )
 
     current_model = model
