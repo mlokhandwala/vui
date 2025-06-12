@@ -36,6 +36,11 @@ vui is a llama based transformer that predicts audio tokens.
 2) Hallucinations: yes the model does hallucinate, but this is the best I could do with limited resources! :(
 3) VAD does slow things down but needed to help remove areas of silence.
 
+# Attribution
+
+Whisper - https://github.com/openai/whisper/
+Audiocraft - https://github.com/openai/whisper/
+
 
 ```
 @software{vui_2025,
