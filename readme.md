@@ -38,8 +38,8 @@ vui is a llama based transformer that predicts audio tokens.
 
 # Attribution
 
-Whisper - https://github.com/openai/whisper/
-Audiocraft - https://github.com/openai/whisper/
+- Whisper - https://github.com/openai/whisper
+- Audiocraft - https://github.com/facebookresearch/audiocraft
 
 
 ```
