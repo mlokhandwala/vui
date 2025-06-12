@@ -30,6 +30,8 @@ You can clone with the base model quite well but it's not perfect as hasn't seen
 
 vui is a llama based transformer that predicts audio tokens.
 
+fluac is a audio tokenizer based on descript-audio-codec which reduces the number of codes per second by 4 from 83.1hz to 21.53hz
+
 # FAQ
 
 1) Was developed with on two 4090's https://x.com/harrycblum/status/1752698806184063153
@@ -40,6 +42,7 @@ vui is a llama based transformer that predicts audio tokens.
 
 - Whisper - https://github.com/openai/whisper
 - Audiocraft - https://github.com/facebookresearch/audiocraft
+- Descript Audio Codec - https://github.com/descriptinc/descript-audio-codec
 
 # Citation
 
