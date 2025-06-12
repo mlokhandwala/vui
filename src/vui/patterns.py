@@ -7,19 +7,6 @@ from functools import lru_cache
 import torch
 import torch.nn.functional as F
 
-
-def apply_delay_pattern(codes: torch.Tensor, mask_token: int):
-    codes = F.pad(codes, (0, codes.shape[1] + 1), value=mask_token)
-    return torch.stack([codes[:, k].roll(k + 1) for k in range(codes.shape[1])], dim=1)
-
-
-def revert_delay_pattern(codes: torch.Tensor):
-    _, n_q, seq_len = codes.shape
-    return torch.stack(
-        [codes[:, k, k + 1 : seq_len - n_q + k] for k in range(n_q)], dim=1
-    )
-
-
 LayoutCoord = namedtuple("LayoutCoord", ["t", "q"])  # (timestep, codebook index)
 PatternLayout = list[list[LayoutCoord]]  # Sequence of coordinates
 logger = logging.getLogger(__name__)
@@ -410,14 +397,3 @@ class DelayedPatternProvider(CodebooksPatternProvider):
             out.append(v)
         return Pattern(out, n_q=self.n_q, timesteps=timesteps)
 
-
-if __name__ == "__main__":
-    # Tried to use the simple patterns to train and something very odd happened.
-    Q = 4
-
-    codes = torch.randint(0, 1000, (1, Q, 100))
-    pcodes = apply_delay_pattern(codes, 1001)
-    provider = DelayedPatternProvider(Q)
-    provider = provider.get_pattern(100)
-    pcodes2 = provider.build_pattern_sequence(codes, 1001)
-    breakpoint()
