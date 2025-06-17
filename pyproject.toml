@@ -20,10 +20,19 @@ dependencies = [
     "pyannote.audio==3.3.2",
     "soundfile==0.13.1",
     "tiktoken==0.9.0",
-    "torch==2.7.1",
+    "torch",
     "torchaudio",
+    "torchvision",
     "transformers==4.52.4",
 ]
+
+[tool.uv.index]
+pytorch-cu128 = "https://download.pytorch.org/whl/cu128"
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu128" }
+torchaudio = { index = "pytorch-cu128" }
+torchvision = { index = "pytorch-cu128" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
