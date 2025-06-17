@@ -36,10 +36,12 @@ class KVCache(nn.Module):
         # input_pos: (T,), k_val: (B, nh, T, d)
         assert input_pos.size(0) == k_val.size(-2)
 
+        
         k_out = self.k_cache
         v_out = self.v_cache
-        k_out[:, :, input_pos] = k_val
-        v_out[:, :, input_pos] = v_val
+        input_pos = input_pos.int()
+        k_out[:, :, input_pos] = k_val.to(k_out.dtype)
+        v_out[:, :, input_pos] = v_val.to(k_out.dtype)
 
         return k_out, v_out
 
