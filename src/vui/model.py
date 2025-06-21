@@ -303,7 +303,6 @@ class Decoder(nn.Module):
                 batch_size, self.max_seqlen, block.n_kv_heads, block.head_dim, dtype
             ).to(device)
 
-        # I don't understand why this is needed
         self.attn_mask = torch.tril(
             torch.ones(
                 self.max_seqlen, self.max_seqlen, dtype=torch.bool, device=device
