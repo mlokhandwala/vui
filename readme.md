@@ -4,8 +4,22 @@ Small Conversational speech models that can run on device
 
 # Installation
 
+*Before running `demo.py`, you must accept model terms for [Voice Activity Detection](https://huggingface.co/pyannote/voice-activity-detection) and [Segmentation](https://huggingface.co/pyannote/segmentation) on Hugging Face.*
+
+## Linux
 ```sh
 uv pip install -e .
+```
+## Windows
+Create and activate a virtual environment
+```pwsh
+uv venv
+.venv\Scripts\activate
+```
+Install dependencies 
+```pwsh
+uv pip install -e .
+uv pip install triton_windows
 ```
 
 # Demo
