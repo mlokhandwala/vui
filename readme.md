@@ -1,6 +1,6 @@
 # vui
 
-Small Conversational speech models that can run on device
+Small 100M Conversational speech models that can run on device
 
 # Installation
 
